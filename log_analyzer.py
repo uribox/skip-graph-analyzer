@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 from datetime import datetime
 
-# --- Matplotlib Backend Fix (Windowsエラー回避) ---
+
 import matplotlib
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
@@ -13,16 +13,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-# ==============================================================================
-# 【設定エリア】
+
 # ログから抽出してCSVに残したいパラメータ名
-# ==============================================================================
 TARGET_PARAMS = [
     "Capacity",
     "Lifetime",
     "Topologies",
 ]
-# ==============================================================================
 
 # --- Regex Patterns ---
 REGEX_TIME_SERIES = re.compile(
@@ -203,7 +200,6 @@ def main():
     df_final = pd.DataFrame(final_results)
 
     # --- Generate Graphs ---
-    # 入力順序（labelsの順序）を守るためにCategorical型を使用
     df_final['Method'] = pd.Categorical(df_final['Method'], categories=labels, ordered=True)
     df_final.sort_values('Method', inplace=True)
     
@@ -211,7 +207,6 @@ def main():
     
     if all_ts_data:
         df_ts_all = pd.concat(all_ts_data, ignore_index=True)
-        # 時系列データも同じ順序を守る
         df_ts_all['Method'] = pd.Categorical(df_ts_all['Method'], categories=labels, ordered=True)
         df_ts_all.sort_values('Method', inplace=True)
         
