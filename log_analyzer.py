@@ -8,6 +8,7 @@ from datetime import datetime
 import matplotlib
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches 
 
 import pandas as pd
 import seaborn as sns
@@ -20,7 +21,6 @@ TARGET_PARAMS = [
     "Topologies",
 ]
 
-
 # --- Regex Patterns ---
 REGEX_TIME_SERIES = re.compile(
     r"time=(\d+).*?"
@@ -31,7 +31,6 @@ REGEX_TIME_SERIES = re.compile(
     re.IGNORECASE
 )
 
-
 REGEX_FINAL_RESULT = re.compile(
     r"Final results.*?"
     r"avgSuccessRatio=([\d\.]+).*?"
@@ -40,7 +39,6 @@ REGEX_FINAL_RESULT = re.compile(
     r"avgFailedTime=([\d\.]+)",
     re.IGNORECASE
 )
-
 
 REGEX_INTERMEDIATE = re.compile(
     r"Intermediate results.*?"
@@ -156,47 +154,153 @@ def parse_log_file(file_path: Path, label: str) -> Tuple[pd.DataFrame, Optional[
     return df_ts, final_res
 
 def plot_comparison(df_final: pd.DataFrame, output_dir: Path):
-    if df_final.empty or df_final['Success Ratio'].sum() == 0:
+    """
+    平均値の比較棒グラフを出力する。
+    plt.bar を使用して width=0.5 を確実に適用。
+    """
+    if df_final.empty:
         return
 
     sns.set(style="whitegrid")
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    
+    df_plot = df_final.copy()
+    df_plot['Success Ratio'] = df_plot['Success Ratio'] * 100
 
-    sns.barplot(x='Method', y='Success Ratio', data=df_final, ax=axes[0], palette='viridis', hue='Method')
-    axes[0].set_title('Average Success Ratio (Higher is Better)', fontsize=14)
-    axes[0].set_ylim(0, 1.05)
-    for i, row in df_final.iterrows():
-        if row['Success Ratio'] > 0:
-            axes[0].text(i, row['Success Ratio'] + 0.01, f"{row['Success Ratio']:.3f}", ha='center', fontweight='bold')
+    methods = df_plot['Method'].tolist()
+    
+    # --- 1. Success Ratio Bar Chart ---
+    plt.figure(figsize=(8, 6))
+    
+    colors_sr = sns.color_palette('viridis', len(df_plot))
+    
+    bars1 = plt.bar(df_plot['Method'], df_plot['Success Ratio'], color=colors_sr, width=0.2)
 
-    sns.barplot(x='Method', y='Search Time', data=df_final, ax=axes[1], palette='magma', hue='Method')
-    axes[1].set_title('Average Search Time (ms) (Lower is Better)', fontsize=14)
-    for i, row in df_final.iterrows():
-        if row['Search Time'] > 0:
-            axes[1].text(i, row['Search Time'] + 50, f"{int(row['Search Time'])}", ha='center', fontweight='bold')
+    plt.title('Average Success Ratio', fontsize=14)
+    plt.ylabel('Success Ratio (%)', fontsize=12) 
+    plt.ylim(0, 105) 
+    
+    handles_sr = [mpatches.Patch(color=c, label=l) for c, l in zip(colors_sr, methods)]
+    plt.legend(handles=handles_sr, loc='upper left', title='Method')
 
-    output_path = output_dir / 'comparison_bar_chart.png'
+    for bar in bars1:
+        height = bar.get_height()
+        if height > 0:
+            plt.text(bar.get_x() + bar.get_width()/2., height + 1,
+                     f'{height:.1f}%', ha='center', va='bottom', fontweight='bold')
+    
+    out_path_sr = output_dir / 'comparison_bar_success_ratio.png'
     plt.tight_layout()
-    plt.savefig(output_path)
-    print(f"[Info] Saved bar chart: {output_path}")
+    plt.savefig(out_path_sr)
+    plt.close()
+    print(f"[Info] Saved bar chart: {out_path_sr}")
+
+    # --- 2. Search Time Bar Chart ---
+    plt.figure(figsize=(8, 6))
+    
+    colors_st = sns.color_palette('magma', len(df_plot))
+
+    bars2 = plt.bar(df_plot['Method'], df_plot['Search Time'], color=colors_st, width=0.2)
+
+    plt.title('Average Search Time', fontsize=14)
+    plt.ylabel('Search Time (ms)', fontsize=12)
+    
+    handles_st = [mpatches.Patch(color=c, label=l) for c, l in zip(colors_st, methods)]
+    plt.legend(handles=handles_st, loc='upper left', title='Method')
+    
+    for bar in bars2:
+        height = bar.get_height()
+        if height > 0:
+            plt.text(bar.get_x() + bar.get_width()/2., height,
+                     f'{int(height)}', ha='center', va='bottom', fontweight='bold')
+
+    out_path_st = output_dir / 'comparison_bar_search_time.png'
+    plt.tight_layout()
+    plt.savefig(out_path_st)
+    plt.close()
+    print(f"[Info] Saved bar chart: {out_path_st}")
 
 def plot_timeseries(df_ts: pd.DataFrame, output_dir: Path):
+
     if df_ts.empty:
         return
 
     sns.set(style="whitegrid")
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    
+    df_plot = df_ts.copy()
+    df_plot['Success Ratio'] = df_plot['Success Ratio'] * 100
 
-    sns.lineplot(x='Time', y='Success Ratio', hue='Method', data=df_ts, ax=axes[0], marker='o')
-    axes[0].set_title('Success Ratio over Time', fontsize=14)
-
-    sns.lineplot(x='Time', y='Search Time', hue='Method', data=df_ts, ax=axes[1], marker='o')
-    axes[1].set_title('Search Time over Time (ms)', fontsize=14)
-
-    output_path = output_dir / 'comparison_time_series.png'
+    # --- 1. Success Ratio Time Series ---
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(x='Time', y='Success Ratio', hue='Method', data=df_plot, marker='o')
+    
+    plt.title('Comparison: Success Ratio', fontsize=14)
+    plt.ylabel('Success Ratio (%)', fontsize=12)
+    plt.xlabel('Time (h)', fontsize=12)
+    plt.ylim(0, 105)
+    
+    plt.legend(loc='upper left', title='Method')
+    
+    out_path_sr = output_dir / 'comparison_ts_success_ratio.png'
     plt.tight_layout()
-    plt.savefig(output_path)
-    print(f"[Info] Saved time series chart: {output_path}")
+    plt.savefig(out_path_sr)
+    plt.close()
+    print(f"[Info] Saved time series chart: {out_path_sr}")
+
+    # --- 2. Search Time Time Series ---
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(x='Time', y='Search Time', hue='Method', data=df_plot, marker='o')
+    
+    plt.title('Comparison: Search Time', fontsize=14)
+    plt.ylabel('Search Time (ms)', fontsize=12)
+    plt.xlabel('Time (h)', fontsize=12)
+    
+    plt.legend(loc='upper left', title='Method')
+    
+    out_path_st = output_dir / 'comparison_ts_search_time.png'
+    plt.tight_layout()
+    plt.savefig(out_path_st)
+    plt.close()
+    print(f"[Info] Saved time series chart: {out_path_st}")
+
+def plot_individual_charts(df_ts: pd.DataFrame, label: str, output_dir: Path):
+
+    if df_ts.empty:
+        return
+
+    indiv_dir = output_dir / "individual_plots"
+    indiv_dir.mkdir(exist_ok=True)
+    
+    sns.set(style="whitegrid")
+    
+    df_plot = df_ts.copy()
+    df_plot['Success Ratio'] = df_plot['Success Ratio'] * 100
+
+    safe_label = re.sub(r'[\\/*?:"<>|]', "_", label)
+
+    # --- 1. Individual Success Ratio ---
+    plt.figure(figsize=(8, 5))
+    sns.lineplot(x='Time', y='Success Ratio', data=df_plot, marker='o', color='green')
+    
+    plt.title(f'[{label}] Success Ratio', fontsize=12)
+    plt.ylabel('Success Ratio (%)', fontsize=10)
+    plt.xlabel('Time (h)', fontsize=10)
+    plt.ylim(0, 105)
+    
+    plt.tight_layout()
+    plt.savefig(indiv_dir / f"{safe_label}_success_ratio.png")
+    plt.close()
+
+    # --- 2. Individual Search Time ---
+    plt.figure(figsize=(8, 5))
+    sns.lineplot(x='Time', y='Search Time', data=df_plot, marker='o', color='purple')
+    
+    plt.title(f'[{label}] Search Time (ms)', fontsize=12)
+    plt.ylabel('Search Time (ms)', fontsize=10)
+    plt.xlabel('Time (h)', fontsize=10)
+    
+    plt.tight_layout()
+    plt.savefig(indiv_dir / f"{safe_label}_search_time.png")
+    plt.close()
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize and compare network simulation logs.")
@@ -208,7 +312,6 @@ def main():
 
     file_paths = []
     
-    # ファイル収集ロジック
     if not args.files:
         default_dir = Path("logs")
         if default_dir.exists() and default_dir.is_dir():
@@ -233,7 +336,6 @@ def main():
         print(f"[Error] Label count mismatch. Files: {len(file_paths)}, Labels: {len(labels)}")
         sys.exit(1)
 
-    # Output Directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path(args.out) / timestamp
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -250,6 +352,8 @@ def main():
         
         if not df.empty:
             all_ts_data.append(df)
+            plot_individual_charts(df, label, output_dir)
+
         if final:
             final_results.append(final)
 
@@ -259,7 +363,7 @@ def main():
 
     df_final = pd.DataFrame(final_results)
 
-    # Generate Graphs (Sort by input order)
+    # Generate Combined Graphs 
     df_final['Method'] = pd.Categorical(df_final['Method'], categories=labels, ordered=True)
     df_final.sort_values('Method', inplace=True)
     
@@ -284,9 +388,8 @@ def main():
     preview_cols = ['Method', 'Success Ratio', 'Search Time', 'Status']
     print("\n=== Analysis Summary ===")
     print(df_final[[c for c in preview_cols if c in df_final.columns]].to_string(index=False))
+    print(f"\n[Done] Check the output directory: {output_dir}")
+    print(f"       Individual plots are in: {output_dir / 'individual_plots'}")
 
 if __name__ == "__main__":
     main()
-
-
-    
