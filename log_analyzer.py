@@ -13,15 +13,12 @@ import matplotlib.patches as mpatches
 import pandas as pd
 import seaborn as sns
 
-
-# 【設定エリア】
 TARGET_PARAMS = [
     "Capacity",
     "Lifetime",
     "Topologies",
 ]
 
-# --- Regex Patterns ---
 REGEX_TIME_SERIES = re.compile(
     r"time=(\d+).*?"
     r"successRatio=([\d\.]+).*?"
@@ -164,8 +161,7 @@ def plot_comparison(df_final: pd.DataFrame, output_dir: Path):
     df_plot['Success Ratio'] = df_plot['Success Ratio'] * 100
 
     methods = df_plot['Method'].tolist()
-    
-    # --- 1. Success Ratio Bar Chart ---
+
     plt.figure(figsize=(8, 6))
     
     colors_sr = sns.color_palette('viridis', len(df_plot))
@@ -191,7 +187,6 @@ def plot_comparison(df_final: pd.DataFrame, output_dir: Path):
     plt.close()
     print(f"[Info] Saved bar chart: {out_path_sr}")
 
-    # --- 2. Search Time Bar Chart ---
     plt.figure(figsize=(8, 6))
     
     colors_st = sns.color_palette('magma', len(df_plot))
@@ -226,7 +221,6 @@ def plot_timeseries(df_ts: pd.DataFrame, output_dir: Path):
     df_plot = df_ts.copy()
     df_plot['Success Ratio'] = df_plot['Success Ratio'] * 100
 
-    # --- 1. Success Ratio Time Series ---
     plt.figure(figsize=(10, 6))
     sns.lineplot(x='Time', y='Success Ratio', hue='Method', data=df_plot, marker='o')
     
@@ -243,7 +237,6 @@ def plot_timeseries(df_ts: pd.DataFrame, output_dir: Path):
     plt.close()
     print(f"[Info] Saved time series chart: {out_path_sr}")
 
-    # --- 2. Search Time Time Series ---
     plt.figure(figsize=(10, 6))
     sns.lineplot(x='Time', y='Search Time', hue='Method', data=df_plot, marker='o')
     
@@ -274,7 +267,6 @@ def plot_individual_charts(df_ts: pd.DataFrame, label: str, output_dir: Path):
 
     safe_label = re.sub(r'[\\/*?:"<>|]', "_", label)
 
-    # --- 1. Individual Success Ratio ---
     plt.figure(figsize=(8, 5))
     sns.lineplot(x='Time', y='Success Ratio', data=df_plot, marker='o', color='green')
     
@@ -287,7 +279,6 @@ def plot_individual_charts(df_ts: pd.DataFrame, label: str, output_dir: Path):
     plt.savefig(indiv_dir / f"{safe_label}_success_ratio.png")
     plt.close()
 
-    # --- 2. Individual Search Time ---
     plt.figure(figsize=(8, 5))
     sns.lineplot(x='Time', y='Search Time', data=df_plot, marker='o', color='purple')
     
@@ -359,8 +350,7 @@ def main():
         sys.exit(1)
 
     df_final = pd.DataFrame(final_results)
-
-    # Generate Combined Graphs 
+ 
     df_final['Method'] = pd.Categorical(df_final['Method'], categories=labels, ordered=True)
     df_final.sort_values('Method', inplace=True)
     
