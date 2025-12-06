@@ -154,10 +154,7 @@ def parse_log_file(file_path: Path, label: str) -> Tuple[pd.DataFrame, Optional[
     return df_ts, final_res
 
 def plot_comparison(df_final: pd.DataFrame, output_dir: Path):
-    """
-    平均値の比較棒グラフを出力する。
-    plt.bar を使用して width=0.5 を確実に適用。
-    """
+
     if df_final.empty:
         return
 
