@@ -6,4 +6,4 @@ SkipSimのログ解析ツールです。
 ## 使い方
 ```bash
 pip install -r requirements.txt
-python log_analyzer.py standard_exp.txt dpad_exp.txt interlaced_exp.txt hybrid_exp.txt --labels Standard DPAD interlaced Hybrid 
+python log_analyzer.py standard_exp.txt dpad_exp.txt interlaced_exp.txt --labels Standard DPAD interlaced 
